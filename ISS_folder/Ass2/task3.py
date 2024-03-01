@@ -2,6 +2,47 @@ import requests
 import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 import mysql.connector
+import sys
+import re
+
+# Run this on windows MySQL CLI to create user
+# mysql> CREATE USER 'root'@'172.27.153.109' IDENTIFIED BY 'some_pass';
+# Query OK, 0 rows affected (0.48 sec)
+
+# mysql> GRANT ALL PRIVILEGES ON *.* TO 'root'@'172.27.153.109';
+# Query OK, 0 rows affected (0.37 sec)
+
+#use this to access mysql on windows from wsl:
+# mysql -h 172.27.144.1 -u wsl_user -p
+#password is some_pass
+
+db_config = {
+    "host": "172.27.144.1",
+    "user": "root",
+    "password": "some_pass",
+    "database": "imdb",
+    "port": "3306"
+}
+
+connection = mysql.connector.connect(**db_config)
+
+if connection.is_connected():
+    print("Connected to the database")
+
+
+mycursor = connection.cursor()
+
+mycursor.execute("SELECT * FROM test_table")
+
+myresult = mycursor.fetchall()
+
+# for x in myresult:
+#     # for y in x:
+#     #     print(y, end=', ')
+#     print(', '.join(map(str,x)))
+
+# sys.exit(0)
+
 headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36", "Accept-Encoding":"gzip, deflate", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "DNT":"1","Connection":"close", "Upgrade-Insecure-Requests":"1"}
 url = "https://www.imdb.com/chart/toptv/"
 response = requests.get(url,headers=headers)
@@ -14,37 +55,57 @@ ratings = soup.find_all(class_="ipc-rating-star ipc-rating-star--base ipc-rating
 num_ratings = []
 episode_counts = []
 s_no = []
+sno_titles = []
+ratings_counts = []
+genres = []
 
-for num in range(250):
-    s_no.append(title_elements[num+2].text.split()[0])
-    s_no[num]=s_no[num].split('.')[0]
-    words = title_elements[num+2].text.split()[1:]
-    title_elements[num] = ' '.join(words)
+for elem in soup.find_all(class_="ipc-title__text"):
+    m = re.search("(\d+)\.\s+(.+)", elem.text)
+    if m: sno_titles.append(m.group(1, 2))
 
-    num_ratings.append(ratings[num].text.split()[1])
-    ratings[num] = ratings[num].text.split()[0]
+for elem in soup.find_all(class_="ipc-rating-star ipc-rating-star--base ipc-rating-star--imdb ratingGroup--imdb-rating"):
+    m = re.search("(\S+)\s+\((\S+)\)", elem.text)
+    if m: ratings_counts.append(m.group(1, 2))
 
-for raw in episode_counts_raw:
-    # print(raw.text)
-    splitty = raw.text.split()
-    if len(splitty)==2 and splitty[1]=='eps':
-        episode_counts.append(raw.text)
+for elem in soup.find_all(class_="sc-be6f1408-8 fcCUPU cli-title-metadata-item"):
+    m = re.search("(\d+) eps", elem.text)
+    if m: episode_counts.append(m.group(1))
 
-frequency_count = {}
-for count in episode_counts:
-    frequency_count[count] = frequency_count.get(count, 0) + 1
+# for st, ep, rc in zip(sno_titles, episode_counts, ratings_counts):
+#     print(f"{st[0]}, {st[1]}, {ep}, {rc[0]}, {rc[1]}")
 
-x_values = list(frequency_count.keys())
-y_values = list(frequency_count.values())
+sys.exit(0)
+
+# for num in range(250):
+#     s_no.append(title_elements[num+2].text.split('.')[0])
+#     s_no[num]=s_no[num].split('.')[0]
+#     words = title_elements[num+2].text.split()[1:]
+#     title_elements[num] = ' '.join(words)
+
+#     num_ratings.append(ratings[num].text.split()[1])
+#     ratings[num] = ratings[num].text.split()[0]
+
+# for raw in episode_counts_raw:
+#     # print(raw.text)
+#     splitty = raw.text.split()
+#     if len(splitty)==2 and splitty[1]=='eps':
+#         episode_counts.append(raw.text)
+
+# frequency_count = {}
+# for count in episode_counts:
+#     frequency_count[count] = frequency_count.get(count, 0) + 1
+
+# x_values = list(frequency_count.keys())
+# y_values = list(frequency_count.values())
 
 
 
-for i in range(250):
-    print([i for i in s_no][0:250][i], end=', ')
-    print([i for i in title_elements][0:250][i], end=', ')
-    print([i for i in episode_counts][0:250][i], end=', ')
-    print([i for i in ratings][0:250][i], end=', ')
-    print([i for i in num_ratings][0:250][i])
+# for i in range(250):
+#     print([i for i in s_no][0:250][i], end=', ')
+#     print([i for i in title_elements][0:250][i], end=', ')
+#     print([i for i in episode_counts][0:250][i], end=', ')
+#     print([i for i in ratings][0:250][i], end=', ')
+#     print([i for i in num_ratings][0:250][i])
 
 
 # for i in range(250):
@@ -128,20 +189,21 @@ finally:
 
 
 # Replace the placeholders with your actual database information
-# db_config = {
-#     "host": "172.27.153.109",
-#     "user": "root",
-#     "password": "",
-#     "database": "imdb",
-#     "port": "3306"
-# }
+db_config = {
+    "host": "127.0.0.1",
+    "user": "root",
+    "password": "Omlet90!omlet90!",
+    "database": "imdb",
+    "port": "3306"
+}
+connection = mysql.connector.connect(**db_config)
 
 # try:
 #     # Establish a connection to the database
 #     connection = mysql.connector.connect(**db_config)
 
-#     if connection.is_connected():
-#         print("Connected to the database")
+if connection.is_connected():
+    print("Connected to the database")
 
         # Perform database operations here
 
